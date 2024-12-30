@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motion and Emotion Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        table {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        table th, table td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        table tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        table tbody tr:hover {
+            background-color: #ddd;
+        }
+
+        .container {
+            margin: 30px auto;
+            max-width: 1100px;
+            padding: 15px;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            width: 250px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .back-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        /* Responsive Design */
+        @media screen and (max-width: 768px) {
+            table {
+                width: 100%;
+            }
+
+            input[type="text"] {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+
+        /* Styling for the canvas (Charts) */
+        .chart-container {
+            width: 80%;
+            margin: 20px auto;
+            display: flex;
+            justify-content: space-around;
+        }
+
+        canvas {
+            max-width: 500px;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Motion and Emotion Detection Data</h1>
+</header>
+
+<div class="container">
+    <!-- Search Bar -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search Data..." onkeyup="searchData()">
+        <button onclick="clearSearch()">Clear Search</button>
+    </div>
+
+    <!-- Motion Detection Data -->
+    <h2>Motion Detection Data</h2>
+    <table id="motionTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Motion</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for motion in motion_data %}
+                <tr>
+                    <td>{{ motion.id }}</td>
+                    <td>{{ motion.timestamp }}</td>
+                    <td>{{ motion.motion }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Motion Chart -->
+    <div class="chart-container">
+        <canvas id="motionChart"></canvas>
+    </div>
+
+    <!-- Emotion Detection Data -->
+    <h2>Emotion Detection Data</h2>
+    <table id="emotionTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Timestamp</th>
+                <th>Emotion</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for emotion in emotion_data %}
+                <tr>
+                    <td>{{ emotion.id }}</td>
+                    <td>{{ emotion.timestamp }}</td>
+                    <td>{{ emotion.emotion }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Emotion Chart -->
+    <div class="chart-container">
+        <canvas id="emotionChart"></canvas>
+    </div>
+
+    <!-- Back Button -->
+    <a href="/" class="back-btn">Back to Home</a>
+</div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    console.log("Emotion Data:", {{ emotion_data | tojson }});
+    console.log("Motion Data:", {{ motion_data | tojson }});
+
+    // Emotion Data for the chart
+    const emotionData = {{ emotion_data | tojson }};
+    const emotionLabels = ["Angry", "Sad", "Happy", "Fear", "Surprise", "Neutral"];
+    const emotionCounts = emotionLabels.map(emotion =>
+        emotionData.filter(event => event.emotion === emotion).length
+    );
+
+    // Motion Data for the chart
+    const motionData = {{ motion_data | tojson }};
+    const motionLabels = ["Dizziness Detected", "Fall Detected", "Unconscious Detected"];
+
+    const motionCounts = motionLabels.map(status =>
+        motionData.filter(event => event.motion === status).length
+    );
+
+    // Check if data exists before rendering the chart
+    if (motionCounts.every(count => count === 0)) {
+        console.warn("No motion data available.");
+    }
+
+    if (emotionCounts.every(count => count === 0)) {
+        console.warn("No emotion data available.");
+    }
+
+    // Create Motion Chart (Bar Chart)
+    const motionChart = new Chart(document.getElementById('motionChart'), {
+        type: 'bar',
+        data: {
+            labels: motionLabels,
+            datasets: [{
+                label: 'Occurrences of Motion Events',
+                data: motionCounts,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.2)', // Dizziness
+                    'rgba(54, 162, 235, 0.2)', // Fall
+                    'rgba(255, 205, 86, 0.2)'  // Unconscious
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 205, 86, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Motion Status'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Occurrences'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Create Emotion Chart (Bar Chart)
+    const emotionChart = new Chart(document.getElementById('emotionChart'), {
+        type: 'bar',
+        data: {
+            labels: emotionLabels,
+            datasets: [{
+                label: 'Emotion Detection Count',
+                data: emotionCounts,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.2)',
+                    'rgba(54, 162, 235, 0.2)',
+                    'rgba(255, 205, 86, 0.2)',
+                    'rgba(75, 192, 192, 0.2)',
+                    'rgba(153, 102, 255, 0.2)',
+                    'rgba(255, 159, 64, 0.2)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 205, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Emotion'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Frequency'
+                    },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Detection System</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        function showLoading(action) {
+            const loader = document.getElementById("loader");
+            const message = document.getElementById("action-message");
+            message.textContent = action + " is starting...";
+            loader.style.display = "block";
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>AI Detection System</h1>
+    </header>
+    <main>
+        <div class="description">
+            <p>Welcome to the AI Detection System! Choose an action below:</p>
+        </div>
+        <div class="button-container">
+            <form method="POST" action="/start_emotion_detection">
+                <button type="submit" onclick="showLoading('Emotion Detection')">Detect Emotion</button>
+            </form>
+            <form method="POST" action="/start_motion_detection">
+                <button type="submit" onclick="showLoading('Motion & Behavior Detection')">Detect Motion & Behavior</button>
+            </form>
+        </div>
+        <div id="loader" style="display: none;">
+            <div class="spinner"></div>
+            <p id="action-message"></p>
+        </div>
+    </main>
+</body>
+</html>
