@@ -27,7 +27,7 @@ emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutr
 
 def trigger_alarm():
     # Path to the alarm sound file (change this to your actual alarm sound file)
-    alarm_sound_path = r'C:\Users\saanj\Desktop\detection\sound.mp3'  # Ensure this is a valid path
+    alarm_sound_path = r'C:\Asan\detection\sound.mp3'  # Ensure this is a valid path
     playsound(alarm_sound_path)
 
 # Save the emotion event to the database

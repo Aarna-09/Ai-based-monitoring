@@ -1,48 +1,60 @@
 import cv2
 import cvzone
 import math
-from ultralytics import YOLO
 import threading
-from playsound import playsound
 import os
-import sqlite3
 from datetime import datetime
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from playsound import playsound
+import hashlib
+import json
 
-# Initialize Flask app and SQLAlchemy
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///detections.db'  # Database URI for SQLite
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+# Blockchain Implementation
+class Blockchain:
+    def __init__(self):
+        self.chain = []
+        self.create_block(previous_hash='0')  # Genesis block
+
+    def create_block(self, motion=None, timestamp=None, previous_hash='0'):
+        block = {
+            'index': len(self.chain) + 1,
+            'timestamp': timestamp if timestamp else datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'motion': motion,
+            'previous_hash': previous_hash,
+            'hash': ''
+        }
+        block['hash'] = self.hash_block(block)
+        self.chain.append(block)
+        return block
+
+    @staticmethod
+    def hash_block(block):
+        block_string = json.dumps(block, sort_keys=True).encode()
+        return hashlib.sha256(block_string).hexdigest()
+
+    def get_last_block(self):
+        return self.chain[-1]
+
+    def add_event(self, motion):
+        last_block = self.get_last_block()
+        new_block = self.create_block(
+            motion=motion,
+            previous_hash=last_block['hash']
+        )
+        return new_block
 
 
-# Database Models
-class MotionDetection(db.Model):
-    __tablename__ = 'motion_detection'
-    id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, nullable=False)
-    motion = db.Column(db.String(100), nullable=False)
+# Initialize the blockchain
+blockchain = Blockchain()
 
-    def __repr__(self):
-        return f'<MotionDetection {self.id}, {self.timestamp}, {self.motion}>'
-
-from datetime import datetime
-
-# Database setup function
-def insert_motion_event(motion):
-    timestamp = datetime.now()  # Use the datetime object instead of string
-    new_event = MotionDetection(timestamp=timestamp, motion=motion)
-    
-    with app.app_context():  # Ensure Flask app context is active
-        db.session.add(new_event)
-        db.session.commit()
-    print(f"Inserted event: {motion} at {timestamp}")
+# Alarm function
+def play_alarm():
+    playsound(r'C:\Asan\detection\sound.mp3')  # Path to your alarm sound file
 
 # Initialize the webcam
 cap = cv2.VideoCapture(0)  # Use 0 for default camera
 
 # Load the YOLO model
+from ultralytics import YOLO
 model = YOLO('yolov8s.pt')
 
 # Load class names
@@ -50,10 +62,6 @@ classnames = []
 classes_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'classes.txt')
 with open(classes_path, 'r') as f:
     classnames = f.read().splitlines()
-
-# Alarm function
-def play_alarm():
-    playsound(r'C:\Users\saanj\Desktop\detection\sound.mp3')  # Path to your alarm sound file
 
 # Track alarm state and person's position
 alarm_triggered = False
@@ -97,7 +105,7 @@ while True:
 
                 # Detect fall based on aspect ratio
                 if aspect_ratio > 1.5:
-                    insert_motion_event("Fall Detected")  # Insert into motion_detection
+                    blockchain.add_event("Fall Detected")
                     cvzone.putTextRect(frame, 'Fall Detected', [x1, y1 - 50], thickness=2, scale=2, colorR=(0, 0, 255))
                     
                     # Trigger alarm for fall
@@ -111,7 +119,7 @@ while True:
                     movement = math.sqrt((current_position[0] - last_position[0]) ** 2 +
                                          (current_position[1] - last_position[1]) ** 2)
                     if movement > 50:  # Dizziness threshold (may need adjustment based on testing)
-                        insert_motion_event("Dizziness Detected")  # Insert into motion_detection
+                        blockchain.add_event("Dizziness Detected")
                         cvzone.putTextRect(frame, 'Dizziness Detected', [x1, y1 - 80], thickness=2, scale=2, colorR=(255, 165, 0))
                 else:
                     movement = 0  # Default value when last_position is None
@@ -122,7 +130,7 @@ while True:
                 if movement < 10:  # Inactivity threshold (may need adjustment based on testing)
                     static_frame_count += 1
                     if static_frame_count > unconscious_threshold:
-                        insert_motion_event("Unconscious Detected")
+                        blockchain.add_event("Unconscious Detected")
                         cvzone.putTextRect(frame, 'Unconscious Detected', [x1, y1 - 110], thickness=2, scale=2, colorR=(255, 0, 0))
                         
                         if not alarm_triggered:
@@ -141,3 +149,8 @@ while True:
 # Release resources
 cap.release()
 cv2.destroyAllWindows()
+
+# Print the blockchain for debugging
+print("\nBlockchain:")
+for block in blockchain.chain:
+    print(json.dumps(block, indent=4))
